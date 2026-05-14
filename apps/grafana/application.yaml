@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: bootstrap
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana
+    targetRevision: 10.5.15
+    helm:
+      releaseName: grafana
+      valuesObject:
+        service:
+          type: ClusterIP
+        ingress:
+          enabled: false
+        persistence:
+          enabled: true
+          size: 10Gi
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Loki
+                type: loki
+                uid: loki
+                access: proxy
+                url: http://loki-gateway.observability.svc.cluster.local
+                isDefault: true
+              - name: Tempo
+                type: tempo
+                uid: tempo
+                access: proxy
+                url: http://tempo.observability.svc.cluster.local:3200
+              - name: Pyroscope
+                type: grafana-pyroscope-datasource
+                uid: pyroscope
+                access: proxy
+                url: http://pyroscope.observability.svc.cluster.local:4040
+        plugins:
+          - grafana-pyroscope-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

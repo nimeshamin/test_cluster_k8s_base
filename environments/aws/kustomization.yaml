@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../apps/istio-base/application.yaml
+  - ../../apps/istiod/application.yaml
+  - ../../apps/namespaces/observability.yaml
+  - ../../apps/loki/application.yaml
+  - ../../apps/tempo/application.yaml
+  - ../../apps/pyroscope/application.yaml
+  - ../../apps/alloy/application.yaml
+  - ../../apps/grafana/application.yaml
