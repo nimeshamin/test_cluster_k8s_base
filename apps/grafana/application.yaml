@@ -33,12 +33,19 @@ spec:
           datasources.yaml:
             apiVersion: 1
             datasources:
+              - name: Prometheus
+                type: prometheus
+                uid: prometheus
+                access: proxy
+                url: http://prometheus-server.observability.svc.cluster.local
+                isDefault: true
+                jsonData:
+                  httpMethod: POST
               - name: Loki
                 type: loki
                 uid: loki
                 access: proxy
                 url: http://loki-gateway.observability.svc.cluster.local
-                isDefault: true
               - name: Tempo
                 type: tempo
                 uid: tempo
@@ -49,6 +56,77 @@ spec:
                 uid: pyroscope
                 access: proxy
                 url: http://pyroscope.observability.svc.cluster.local:4040
+        dashboardProviders:
+          dashboardproviders.yaml:
+            apiVersion: 1
+            providers:
+              - name: kubernetes
+                orgId: 1
+                folder: Kubernetes
+                type: file
+                disableDeletion: false
+                editable: true
+                options:
+                  path: /var/lib/grafana/dashboards/kubernetes
+              - name: istio
+                orgId: 1
+                folder: Istio
+                type: file
+                disableDeletion: false
+                editable: true
+                options:
+                  path: /var/lib/grafana/dashboards/istio
+        dashboards:
+          kubernetes:
+            k8s-views-global:
+              gnetId: 15757
+              revision: 43
+              datasource: Prometheus
+            k8s-views-namespaces:
+              gnetId: 15758
+              revision: 46
+              datasource: Prometheus
+            k8s-views-nodes:
+              gnetId: 15759
+              revision: 40
+              datasource: Prometheus
+            k8s-views-pods:
+              gnetId: 15760
+              revision: 39
+              datasource: Prometheus
+            k8s-system-api-server:
+              gnetId: 15761
+              revision: 21
+              datasource: Prometheus
+            k8s-system-coredns:
+              gnetId: 15762
+              revision: 22
+              datasource: Prometheus
+          istio:
+            istio-mesh:
+              gnetId: 7639
+              revision: 301
+              datasource: Prometheus
+            istio-performance:
+              gnetId: 11829
+              revision: 300
+              datasource: Prometheus
+            istio-service:
+              gnetId: 7636
+              revision: 300
+              datasource: Prometheus
+            istio-workload:
+              gnetId: 7630
+              revision: 301
+              datasource: Prometheus
+            istio-control-plane:
+              gnetId: 7645
+              revision: 300
+              datasource: Prometheus
+            istio-wasm-extension:
+              gnetId: 13277
+              revision: 258
+              datasource: Prometheus
         plugins:
           - grafana-pyroscope-app
   destination:

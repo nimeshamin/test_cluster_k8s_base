@@ -1,0 +1,102 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "8"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: bootstrap
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus
+    targetRevision: 29.6.0
+    helm:
+      releaseName: prometheus
+      valuesObject:
+        server:
+          service:
+            type: ClusterIP
+          global:
+            scrape_interval: 30s
+            evaluation_interval: 30s
+          retention: "15d"
+          persistentVolume:
+            enabled: true
+            size: 20Gi
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+        alertmanager:
+          enabled: false
+        kube-state-metrics:
+          enabled: true
+        prometheus-node-exporter:
+          enabled: true
+        prometheus-pushgateway:
+          enabled: false
+        scrapeConfigs:
+          prometheus-pushgateway:
+            enabled: false
+        extraScrapeConfigs: |
+          - job_name: istiod
+            kubernetes_sd_configs:
+              - role: endpointslice
+                namespaces:
+                  names:
+                    - istio-system
+            relabel_configs:
+              - source_labels:
+                  - __meta_kubernetes_service_name
+                  - __meta_kubernetes_endpointslice_port_name
+                action: keep
+                regex: "istiod;http-monitoring"
+              - source_labels:
+                  - __meta_kubernetes_namespace
+                target_label: namespace
+              - source_labels:
+                  - __meta_kubernetes_service_name
+                target_label: service
+
+          - job_name: envoy-stats
+            metrics_path: /stats/prometheus
+            kubernetes_sd_configs:
+              - role: pod
+            relabel_configs:
+              - source_labels:
+                  - __meta_kubernetes_pod_container_port_name
+                action: keep
+                regex: ".*-envoy-prom"
+              - source_labels:
+                  - __address__
+                  - __meta_kubernetes_pod_container_port_number
+                action: replace
+                regex: "([^:]+)(?::\\d+)?;(\\d+)"
+                replacement: "$1:$2"
+                target_label: __address__
+              - action: labelmap
+                regex: "__meta_kubernetes_pod_label_(.+)"
+              - source_labels:
+                  - __meta_kubernetes_namespace
+                target_label: namespace
+              - source_labels:
+                  - __meta_kubernetes_pod_name
+                target_label: pod
+              - source_labels:
+                  - __meta_kubernetes_pod_node_name
+                target_label: node
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
