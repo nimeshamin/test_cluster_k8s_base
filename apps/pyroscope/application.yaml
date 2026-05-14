@@ -41,11 +41,12 @@ spec:
     - group: apps
       kind: StatefulSet
       name: pyroscope
-      jsonPointers:
-        - /spec/persistentVolumeClaimRetentionPolicy
-        - /spec/volumeClaimTemplates/0/metadata/annotations
-        - /spec/volumeClaimTemplates/0/spec/storageClassName
-        - /spec/volumeClaimTemplates/0/status
+      namespace: observability
+      jqPathExpressions:
+        - ".spec.persistentVolumeClaimRetentionPolicy"
+        - ".spec.volumeClaimTemplates[]?.metadata.annotations"
+        - ".spec.volumeClaimTemplates[]?.spec.storageClassName"
+        - ".spec.volumeClaimTemplates[]?.status"
   syncPolicy:
     automated:
       prune: true
