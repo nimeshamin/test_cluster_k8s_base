@@ -37,6 +37,15 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      name: pyroscope
+      jsonPointers:
+        - /spec/persistentVolumeClaimRetentionPolicy
+        - /spec/volumeClaimTemplates/0/metadata/annotations
+        - /spec/volumeClaimTemplates/0/spec/storageClassName
+        - /spec/volumeClaimTemplates/0/status
   syncPolicy:
     automated:
       prune: true
@@ -44,3 +53,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
