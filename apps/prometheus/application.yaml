@@ -19,6 +19,20 @@ spec:
         server:
           service:
             type: ClusterIP
+          extraInitContainers:
+            - name: init-chown-data
+              image: docker.io/library/busybox:1.37
+              command:
+                - sh
+                - -c
+                - chown -R 65534:65534 /data
+              securityContext:
+                runAsUser: 0
+                runAsNonRoot: false
+                readOnlyRootFilesystem: true
+              volumeMounts:
+                - name: storage-volume
+                  mountPath: /data
           global:
             scrape_interval: 30s
             evaluation_interval: 30s
