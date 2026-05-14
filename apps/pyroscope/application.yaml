@@ -44,6 +44,8 @@ spec:
       namespace: observability
       jqPathExpressions:
         - ".spec.persistentVolumeClaimRetentionPolicy"
+        - ".spec.volumeClaimTemplates[]?.apiVersion"
+        - ".spec.volumeClaimTemplates[]?.kind"
         - ".spec.volumeClaimTemplates[]?.metadata.annotations"
         - ".spec.volumeClaimTemplates[]?.spec.storageClassName"
         - ".spec.volumeClaimTemplates[]?.status"
