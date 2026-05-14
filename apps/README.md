@@ -4,6 +4,7 @@ This directory owns the Argo CD `Application` resources for cluster base service
 
 - Istio base CRDs
 - Istiod
+- Prometheus
 - Loki
 - Tempo
 - Pyroscope

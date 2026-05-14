@@ -4,6 +4,7 @@ resources:
   - ../../apps/istio-base/application.yaml
   - ../../apps/istiod/application.yaml
   - ../../apps/namespaces/observability.yaml
+  - ../../apps/prometheus/application.yaml
   - ../../apps/loki/application.yaml
   - ../../apps/tempo/application.yaml
   - ../../apps/pyroscope/application.yaml
