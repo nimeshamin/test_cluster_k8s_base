@@ -22,6 +22,7 @@ spec:
           enabled: false
         deploymentStrategy:
           type: Recreate
+          rollingUpdate: null
         persistence:
           enabled: true
           size: 10Gi
