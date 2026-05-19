@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mlflow
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "25"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: bootstrap
+  source:
+    repoURL: https://community-charts.github.io/helm-charts
+    chart: mlflow
+    targetRevision: 1.8.1
+    helm:
+      releaseName: mlflow
+      valuesObject:
+        backendStore:
+          databaseMigration: true
+          databaseConnectionCheck: true
+          # The chart's default `:memory:` sqlite is per-connection, so each
+          # HTTP request lands in a fresh DB — create_experiment returns an
+          # id and the next call's get_experiment finds nothing. File-based
+          # sqlite gives a single shared db within the pod's lifetime.
+          # NOTE: /tmp is ephemeral; promote to a PVC when state needs to
+          # survive pod restarts.
+          defaultSqlitePath: "/tmp/mlflow.db"
+        artifactRoot:
+          proxiedArtifactStorage: false
+        service:
+          type: ClusterIP
+          port: 5000
+        ingress:
+          enabled: false
+        # Trainer/worker pods reach MLflow via the short hostname `mlflow`
+        # (an ExternalName shim in the kubeflow ns) plus the canonical
+        # cluster-DNS form, both of which arrive with a port suffix
+        # (e.g. `mlflow:5000`). MLflow 3.x's DNS-rebinding guard does an
+        # exact / fnmatch compare and rejects anything not on this list.
+        # Since the service is ClusterIP only (no ingress), `*` is fine.
+        extraEnvVars:
+          MLFLOW_SERVER_ALLOWED_HOSTS: "*"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mlflow
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -4,9 +4,15 @@ resources:
   - ../../apps/istio-base/application.yaml
   - ../../apps/istiod/application.yaml
   - ../../apps/namespaces/observability.yaml
+  - ../../apps/namespaces/kubeflow.yaml
+  - ../../apps/namespaces/experiments.yaml
+  - ../../apps/namespaces/mlflow.yaml
   - ../../apps/prometheus/application.yaml
   - ../../apps/loki/application.yaml
   - ../../apps/tempo/application.yaml
   - ../../apps/pyroscope/application.yaml
   - ../../apps/alloy/application.yaml
   - ../../apps/grafana/application.yaml
+  - ../../apps/kubeflow-crds/application.yaml
+  - ../../apps/kubeflow-pipelines/application.yaml
+  - ../../apps/mlflow/application.yaml

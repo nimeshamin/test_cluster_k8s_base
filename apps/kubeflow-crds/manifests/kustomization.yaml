@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Cluster-scoped CRDs that Kubeflow Pipelines and Argo Workflows expect to exist
+# before their controllers start. The KFP `platform-agnostic` install variant
+# (referenced by apps/kubeflow-pipelines/application.yaml) intentionally omits
+# these, so they ship as a separate Argo CD Application at an earlier sync wave.
+
+resources:
+  # Argo Workflows minimal CRDs, pinned to the version KFP 2.16.1 bundles.
+  - https://raw.githubusercontent.com/argoproj/argo-workflows/v3.7.3/manifests/base/crds/minimal/argoproj.io_workflows.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-workflows/v3.7.3/manifests/base/crds/minimal/argoproj.io_workflowtemplates.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-workflows/v3.7.3/manifests/base/crds/minimal/argoproj.io_workflowtaskresults.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-workflows/v3.7.3/manifests/base/crds/minimal/argoproj.io_workflowtasksets.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-workflows/v3.7.3/manifests/base/crds/minimal/argoproj.io_clusterworkflowtemplates.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-workflows/v3.7.3/manifests/base/crds/minimal/argoproj.io_workflowartifactgctasks.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-workflows/v3.7.3/manifests/base/crds/minimal/argoproj.io_cronworkflows.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-workflows/v3.7.3/manifests/base/crds/minimal/argoproj.io_workfloweventbindings.yaml
+  # Kubeflow Pipelines own CRDs.
+  - https://raw.githubusercontent.com/kubeflow/pipelines/2.16.1/manifests/kustomize/base/crds/pipelines.kubeflow.org_pipelines.yaml
+  - https://raw.githubusercontent.com/kubeflow/pipelines/2.16.1/manifests/kustomize/base/crds/pipelines.kubeflow.org_pipelineversions.yaml
+  - https://raw.githubusercontent.com/kubeflow/pipelines/2.16.1/manifests/kustomize/base/pipeline/cluster-scoped/viewer-crd.yaml
+  - https://raw.githubusercontent.com/kubeflow/pipelines/2.16.1/manifests/kustomize/base/pipeline/cluster-scoped/scheduled-workflow-crd.yaml
+  # RBAC the platform-agnostic install omits — needed by every workflow's
+  # executor sidecar to report WorkflowTaskResult back to the controller.
+  - workflow-executor-rbac.yaml
+  # Upstream cluster-install ClusterRole + ClusterRoleBinding for the
+  # workflow-controller's `argo` SA — required because we drop --namespaced
+  # from the controller (see apps/kubeflow-pipelines/application.yaml), so
+  # it needs cluster-scope LIST to discover Workflows across namespaces.
+  - workflow-controller-cluster-rbac.yaml

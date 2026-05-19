@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubeflow-crds
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: bootstrap
+  source:
+    repoURL: https://github.com/nimeshamin/test_cluster_k8s_base.git
+    targetRevision: main
+    path: apps/kubeflow-crds/manifests
+  destination:
+    server: https://kubernetes.default.svc
+  ignoreDifferences:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jqPathExpressions:
+        - ".spec.conversion"
+        - ".status"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true

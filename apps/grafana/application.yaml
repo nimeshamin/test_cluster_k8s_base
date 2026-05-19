@@ -24,7 +24,7 @@ spec:
           enabled: true
           size: 10Gi
         initChownData:
-          enabled: false
+          enabled: true
         resources:
           requests:
             cpu: 100m
