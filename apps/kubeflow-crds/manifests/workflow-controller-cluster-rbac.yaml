@@ -1,0 +1,73 @@
+# Cluster-scoped RBAC for the workflow-controller's `argo` ServiceAccount.
+#
+# KFP's platform-agnostic install ships namespace-install RBAC pinned to
+# `kubeflow`. We strip `--namespaced` from the controller args (see
+# apps/kubeflow-pipelines/application.yaml) so workflows submitted into the
+# `experiments` namespace get reconciled too — but that requires the
+# controller to LIST workflows at cluster scope, which the namespace-scoped
+# Role can't grant. This is the upstream cluster-install ClusterRole +
+# ClusterRoleBinding (argoproj/argo-workflows v3.7.3
+# cluster-install-no-crds/workflow-controller-rbac), with the SA subject
+# pinned to kubeflow:argo. Keep in sync when the Argo Workflows version
+# moves in apps/kubeflow-pipelines/application.yaml.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argo-cluster-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps", "namespaces"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims", "persistentvolumeclaims/finalizers"]
+    verbs: ["create", "update", "delete", "get"]
+  - apiGroups: ["argoproj.io"]
+    resources:
+      - workflows
+      - workflows/finalizers
+      - workflowtasksets
+      - workflowtasksets/finalizers
+      - workflowartifactgctasks
+    verbs: ["get", "list", "watch", "update", "patch", "delete", "create"]
+  - apiGroups: ["argoproj.io"]
+    resources:
+      - workflowtemplates
+      - workflowtemplates/finalizers
+      - clusterworkflowtemplates
+      - clusterworkflowtemplates/finalizers
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtaskresults"]
+    verbs: ["list", "watch", "deletecollection"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["cronworkflows", "cronworkflows/finalizers"]
+    verbs: ["get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["create", "get", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["argo-workflows-agent-ca-certificates"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argo-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: argo
+    namespace: kubeflow
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-cluster-role

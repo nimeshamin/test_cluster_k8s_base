@@ -1,0 +1,44 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: workflow-executor
+rules:
+  # The Argo executor sidecar ("wait" container) reports task results back to
+  # the controller by creating WorkflowTaskResult objects under its pod's
+  # ServiceAccount. KFP's platform-agnostic install ships the controller but
+  # no executor RBAC, so without this binding every workflow step's wait
+  # container exits 64 with `workflowtaskresults.argoproj.io is forbidden`.
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflowtaskresults"]
+    verbs: ["create", "patch", "get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default-workflow-executor
+  namespace: kubeflow
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: kubeflow
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: workflow-executor
+---
+# Same binding for the `experiments` namespace — webhook-triggered Workflows
+# run there under `experiments:default`, so its wait sidecar needs the same
+# WorkflowTaskResult write access.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default-workflow-executor
+  namespace: experiments
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: experiments
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: workflow-executor

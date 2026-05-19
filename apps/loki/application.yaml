@@ -32,6 +32,19 @@ spec:
                 index:
                   prefix: loki_index_
                   period: 24h
+          # The chart's default (runAsUser: 10001) hits "permission denied"
+          # creating /var/loki/rules on minikube's hostpath provisioner.
+          # Run as root so the dirs get created; cloud storage classes that
+          # honor fsGroup won't need this but it's a safe override.
+          podSecurityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
+            fsGroup: 0
+          containerSecurityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            runAsNonRoot: false
         singleBinary:
           replicas: 1
           persistence:
