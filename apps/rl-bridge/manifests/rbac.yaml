@@ -1,0 +1,12 @@
+# The bridge DaemonSet's only out-of-band interaction is joining the Ray
+# cluster (via the head Service DNS) and listening on a local UDS for UE
+# worker registrations. It does not need any Kubernetes API access, so this
+# is a plain ServiceAccount with no Role/RoleBinding. If a future iteration
+# needs pod discovery or labeling, add bindings here.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rl-bridge
+  labels:
+    app.kubernetes.io/name: rl-bridge
+    app.kubernetes.io/part-of: ppo-training

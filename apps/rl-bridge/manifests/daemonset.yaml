@@ -1,0 +1,90 @@
+# rl-bridge DaemonSet.
+#
+# One pod per node labeled rl-worker=true. Each pod joins the long-lived
+# RayCluster (rl-head) as a Ray worker node so its plasma store is local
+# to that K8s node — when the trainer puts policy bytes into Ray, each
+# node fetches once and serves all locally-colocated UE worker pods.
+#
+# Phase A2 placeholder: this image is upstream rayproject/ray and the
+# container just runs `ray start --block`. Phase B replaces it with our
+# bridge_daemon.py image that additionally hosts a `policy_cache_<node>`
+# named Ray actor and a UDS server at /var/run/rl-bridge/control.sock
+# for UE worker pods to register their shmem IDs against. The volume
+# mounts below are wired up now so Phase B is a pure image swap.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rl-bridge
+  labels:
+    app.kubernetes.io/name: rl-bridge
+    app.kubernetes.io/part-of: ppo-training
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rl-bridge
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rl-bridge
+        app.kubernetes.io/part-of: ppo-training
+    spec:
+      serviceAccountName: rl-bridge
+      # Scope to nodes that host UE workers. The infra repo labels those
+      # via Pulumi (rl-worker=true on the GKE primary pool and the kind
+      # control-plane); GPU nodes are intentionally left unlabeled since
+      # UE workers can't tolerate the GPU taint and there's no UE work
+      # there for the bridge to broker.
+      nodeSelector:
+        rl-worker: "true"
+      containers:
+        - name: bridge
+          image: rayproject/ray:2.49.0
+          command: ["/bin/bash", "-c"]
+          # `ray start --address=… --block` registers this pod with the
+          # head as a Ray worker node and stays foreground.
+          # NUM_CPUS=0 keeps Ray scheduler from placing arbitrary tasks
+          # on this node — the bridge actor will be the only thing
+          # explicitly placed here (via custom resource label in Phase B).
+          args:
+            - |
+              set -eu
+              exec ray start \
+                --address=rl-head-head-svc.experiments.svc.cluster.local:6379 \
+                --num-cpus=0 \
+                --resources='{"rl_bridge_node": 1}' \
+                --block
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            # Shared with UE worker pods on the same node — UE's
+            # shared-memory communicator and our bridge's matching
+            # Python SharedMemoryCommunicator both mmap segments here.
+            - name: shm
+              mountPath: /dev/shm
+            # UE workers will drop their registration over the UDS at
+            # /var/run/rl-bridge/control.sock. Phase A2 just mounts the
+            # path; Phase B's bridge_daemon.py creates the socket.
+            - name: bridge-control
+              mountPath: /var/run/rl-bridge
+      volumes:
+        - name: shm
+          hostPath:
+            path: /dev/shm
+            type: Directory
+        - name: bridge-control
+          hostPath:
+            path: /var/run/rl-bridge
+            type: DirectoryOrCreate

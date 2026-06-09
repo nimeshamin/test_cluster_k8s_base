@@ -17,3 +17,4 @@ resources:
   - ../../apps/kubeflow-pipelines/application.yaml
   - ../../apps/mlflow/application.yaml
   - ../../apps/kuberay-operator/application.yaml
+  - ../../apps/rl-bridge/application.yaml
