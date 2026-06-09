@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kuberay-operator
+  namespace: argocd
+  annotations:
+    # Installed in the same wave as other application platforms (kubeflow, mlflow)
+    # so the operator + its CRDs (RayCluster, RayJob, RayService) are available
+    # before rl-bridge (later wave) tries to create a RayCluster.
+    argocd.argoproj.io/sync-wave: "25"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: bootstrap
+  source:
+    repoURL: https://ray-project.github.io/kuberay-helm
+    chart: kuberay-operator
+    targetRevision: 1.6.1
+    helm:
+      releaseName: kuberay-operator
+      valuesObject:
+        # Watch the whole cluster — we provision RayClusters in `experiments`
+        # but want headroom to host more namespaces later without re-templating.
+        singleNamespaceInstall: false
+        # Operator footprint stays small; the workload is reconcile loops, not
+        # data plane traffic.
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            memory: 512Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kuberay-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
