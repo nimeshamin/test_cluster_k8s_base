@@ -33,10 +33,13 @@ spec:
             ports:
               - containerPort: 6379
                 name: gcs
+                protocol: TCP
               - containerPort: 8265
                 name: dashboard
+                protocol: TCP
               - containerPort: 10001
                 name: client
+                protocol: TCP
             resources:
               requests:
                 cpu: 500m
