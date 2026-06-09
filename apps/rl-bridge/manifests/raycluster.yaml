@@ -1,0 +1,47 @@
+# Long-lived head-only RayCluster.
+#
+# The head pod is the GCS + plasma owner the bridge DaemonSet pods join as
+# Ray worker nodes (via `ray start --address=…` in their entrypoint). Trainer
+# pods scheduled by Argo Workflows connect to this same head as drivers
+# (`ray.init(address=ray-head-head-svc.experiments.svc:6379)`).
+#
+# `workerGroupSpecs` is intentionally empty — Ray worker capacity comes from
+# the DaemonSet, not from KubeRay-managed worker pods, so we don't want
+# KubeRay also spinning up its own worker group on top.
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: rl-head
+  labels:
+    app.kubernetes.io/name: rl-head
+    app.kubernetes.io/part-of: ppo-training
+spec:
+  rayVersion: "2.49.0"
+  headGroupSpec:
+    serviceType: ClusterIP
+    rayStartParams:
+      dashboard-host: "0.0.0.0"
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: rl-head
+          app.kubernetes.io/part-of: ppo-training
+      spec:
+        containers:
+          - name: ray-head
+            image: rayproject/ray:2.49.0
+            ports:
+              - containerPort: 6379
+                name: gcs
+              - containerPort: 8265
+                name: dashboard
+              - containerPort: 10001
+                name: client
+            resources:
+              requests:
+                cpu: 500m
+                memory: 1Gi
+              limits:
+                cpu: "1"
+                memory: 2Gi
+  workerGroupSpecs: []

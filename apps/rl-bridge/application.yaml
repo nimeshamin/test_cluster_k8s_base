@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rl-bridge
+  namespace: argocd
+  annotations:
+    # Sync after kuberay-operator (wave 25) so the RayCluster CRD exists.
+    argocd.argoproj.io/sync-wave: "30"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: bootstrap
+  source:
+    repoURL: https://github.com/nimeshamin/test_cluster_k8s_base.git
+    targetRevision: main
+    path: apps/rl-bridge/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: experiments
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
