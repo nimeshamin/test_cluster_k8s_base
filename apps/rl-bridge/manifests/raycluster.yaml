@@ -28,8 +28,13 @@ spec:
           app.kubernetes.io/part-of: ppo-training
       spec:
         containers:
+          # py311 variant — the bridge image (python:3.11-slim) and the
+          # trainer image (UE 5.7 bundles Python 3.11.8) both run on
+          # Python 3.11. Ray refuses to let nodes join the cluster if
+          # the python minor version doesn't match the head's, so the
+          # default 2.49.0 tag (Python 3.9) breaks every join.
           - name: ray-head
-            image: rayproject/ray:2.49.0
+            image: rayproject/ray:2.49.0-py311
             ports:
               - containerPort: 6379
                 name: gcs
