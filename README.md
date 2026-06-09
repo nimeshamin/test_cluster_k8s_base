@@ -19,6 +19,7 @@ The `apps/` directory holds Argo CD `Application` definitions for everything in 
 | MLflow | `mlflow` (community-charts) | `1.8.1` | File-backed sqlite at `/tmp/mlflow.db`; `MLFLOW_SERVER_ALLOWED_HOSTS=*`. |
 | Kubeflow Pipelines | upstream `kubeflow/pipelines` kustomize (`manifests/kustomize/env/platform-agnostic`) | `2.16.1` | Patched via Argo CD `kustomize.patches`: (a) drop `--namespaced` from the workflow-controller so it reconciles Workflows in both `kubeflow` and `experiments` namespaces; (b) strip the default `artifactRepository` block so workflows don't need a per-namespace MinIO secret. |
 | Kubeflow CRDs + workflow-controller RBAC | in-repo kustomize (`apps/kubeflow-crds/manifests/`) | — | Argo Workflows minimal CRDs (pinned to v3.7.3, the version KFP 2.16.1 bundles), KFP's own CRDs, plus the cluster-install workflow-controller ClusterRole/ClusterRoleBinding required when the controller runs cluster-wide. |
+| KubeRay operator | `kuberay-operator` (ray-project) | `1.6.1` | Cluster-wide install (`singleNamespaceInstall: false`) so RayClusters can live in `experiments` and any future namespace. Ships the `RayCluster` / `RayJob` / `RayService` CRDs the PPO runtime depends on. |
 | Namespaces | in-repo manifests (`apps/namespaces/`) | — | `observability`, `kubeflow`, `experiments`, `mlflow`. |
 
 ## Layout

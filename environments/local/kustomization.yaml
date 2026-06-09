@@ -16,3 +16,4 @@ resources:
   - ../../apps/kubeflow-crds/application.yaml
   - ../../apps/kubeflow-pipelines/application.yaml
   - ../../apps/mlflow/application.yaml
+  - ../../apps/kuberay-operator/application.yaml
