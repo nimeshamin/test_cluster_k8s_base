@@ -5,12 +5,10 @@
 # to that K8s node — when the trainer puts policy bytes into Ray, each
 # node fetches once and serves all locally-colocated UE worker pods.
 #
-# Phase A2 placeholder: this image is upstream rayproject/ray and the
-# container just runs `ray start --block`. Phase B replaces it with our
-# bridge_daemon.py image that additionally hosts a `policy_cache_<node>`
-# named Ray actor and a UDS server at /var/run/rl-bridge/control.sock
-# for UE worker pods to register their shmem IDs against. The volume
-# mounts below are wired up now so Phase B is a pure image swap.
+# Runs the agi-rl-rl-bridge image: bridge-entrypoint.sh does `ray start
+# --address=<head>` to join the cluster, then execs bridge_daemon.py
+# which hosts the named `policy_cache_<node>` actor and listens on the
+# UDS at /var/run/rl-bridge/control.sock for UE worker registrations.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -38,21 +36,14 @@ spec:
         rl-worker: "true"
       containers:
         - name: bridge
-          image: rayproject/ray:2.49.0
-          command: ["/bin/bash", "-c"]
-          # `ray start --address=… --block` registers this pod with the
-          # head as a Ray worker node and stays foreground.
-          # NUM_CPUS=0 keeps Ray scheduler from placing arbitrary tasks
-          # on this node — the bridge actor will be the only thing
-          # explicitly placed here (via custom resource label in Phase B).
-          args:
-            - |
-              set -eu
-              exec ray start \
-                --address=rl-head-head-svc.experiments.svc.cluster.local:6379 \
-                --num-cpus=0 \
-                --resources='{"rl_bridge_node": 1}' \
-                --block
+          # Built by agi-unreal-rl/scripts/build-and-load.sh and loaded
+          # into kind (or pushed to AR for cloud). IfNotPresent matches the
+          # local kind-load flow — the node already has the image, so
+          # there's no registry to pull from.
+          image: agi-rl-rl-bridge:kuberay-dev
+          imagePullPolicy: IfNotPresent
+          # ENTRYPOINT is /opt/bridge-entrypoint.sh: `ray start --address`
+          # then `exec python /opt/bridge_daemon.py`.
           env:
             - name: NODE_NAME
               valueFrom:
@@ -62,6 +53,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: RAY_HEAD_ADDR
+              value: rl-head-head-svc.experiments.svc.cluster.local:6379
+            - name: BRIDGE_RAY_NAMESPACE
+              value: rl-bridge
           resources:
             requests:
               cpu: 200m
