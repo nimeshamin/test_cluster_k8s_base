@@ -34,6 +34,39 @@ spec:
       # there for the bridge to broker.
       nodeSelector:
         rl-worker: "true"
+      # Resize /dev/shm to 4 GB on first scheduling onto this node. The
+      # node-default 64 MB tmpfs is too small for UE's PPO network shmem
+      # segments (~80 MB per worker: 40 MB policy + 39 MB critic + small
+      # encoder/decoder + replay buffers). When UE runs out of tmpfs blocks
+      # mid-ftruncate-then-write, the kernel SIGBUSes UE on the boundary
+      # page rather than returning ENOSPC — looks identical to a UE
+      # engine bug at first glance and burned a lot of debugging cycles.
+      # The remount is privileged but happens on a hostPath /dev/shm so
+      # it affects the node's tmpfs; subsequent pods (UE workers) on the
+      # same node see the larger size automatically. Idempotent because
+      # `mount -o remount` on the same target with the same options is a
+      # no-op.
+      initContainers:
+        - name: resize-dev-shm
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              size=$(df -k /dev/shm | awk 'NR==2 {print $2}')
+              # 4 GB target. Skip remount if already at-or-above the target.
+              if [ "$size" -ge 4194304 ]; then
+                echo "/dev/shm already $((size / 1024))M, skipping"
+                exit 0
+              fi
+              echo "resizing /dev/shm from $((size / 1024))M to 4G"
+              mount -o remount,size=4g /dev/shm
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
       containers:
         - name: bridge
           # Built by agi-unreal-rl/scripts/build-and-load.sh and loaded
