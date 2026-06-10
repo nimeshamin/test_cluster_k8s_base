@@ -57,12 +57,17 @@ spec:
               value: rl-head-head-svc.experiments.svc.cluster.local:6379
             - name: BRIDGE_RAY_NAMESPACE
               value: rl-bridge
+          # Generous CPU request, no limits — when Ray's raylet (runs as a
+          # subprocess inside this container after `ray start`) hits CPU
+          # throttling, it misses heartbeats to the head, gets marked dead,
+          # the PolicyCache actor dies, and any UE worker mid-mmap of the
+          # shmem segments that actor was holding open SIGBUSes (signal 7).
+          # Matches the worker/trainer pattern of no-limits-burst-freely.
           resources:
             requests:
-              cpu: 200m
-              memory: 512Mi
-            limits:
+              cpu: "1"
               memory: 1Gi
+            limits: {}
           volumeMounts:
             # Shared with UE worker pods on the same node — UE's
             # shared-memory communicator and our bridge's matching
