@@ -11,7 +11,7 @@ spec:
   project: bootstrap
   source:
     repoURL: https://github.com/nimeshamin/test_cluster_k8s_base.git
-    targetRevision: main
+    targetRevision: firecracker
     path: apps/kubeflow-crds/manifests
   destination:
     server: https://kubernetes.default.svc

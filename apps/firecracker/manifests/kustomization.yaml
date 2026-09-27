@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: firecracker
+resources:
+  - daemonset.yaml
+configMapGenerator:
+  # Pinned artifact versions. Bumping any of these rolls the DaemonSet (the
+  # generated name carries a content hash) and the init container fetches the
+  # new set into /var/lib/firecracker/{release,images}/ on the node.
+  - name: firecracker-artifacts
+    literals:
+      - FC_VERSION=v1.17.0
+      - FC_SHA256=06094a1108ae9e82aa4c23a775aa92758f53f1175d422270d9d6162cb9ade558
+      - FC_CI_PREFIX=firecracker-ci/20260923-6f82ac4cf331-0
+      - FC_KERNEL=vmlinux-6.1.186
+      - FC_ROOTFS=ubuntu-24.04
+  - name: firecracker-scripts
+    files:
+      - scripts/fetch-artifacts.sh
+      - scripts/check.sh
+      - scripts/smoke.sh

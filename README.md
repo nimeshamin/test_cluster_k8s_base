@@ -4,6 +4,23 @@ GitOps platform-services repository consumed by Argo CD (bootstrapped from [`tes
 
 The `apps/` directory holds Argo CD `Application` definitions for everything in the shared platform layer. Each environment directory (`environments/<target>/`) is a root Kustomize target that selects which of those apps deploy for that target.
 
+> **`firecracker` branch.** A slim variant for Firecracker experiments on GCP. Every environment deploys only Istio + the observability stack; `environments/gcp` also deploys the Firecracker host below. MLflow, Kubeflow Pipelines, the Kubeflow CRDs, KubeRay and rl-bridge stay defined under `apps/` but are not referenced by any environment on this branch.
+
+## Firecracker host (`firecracker` branch)
+
+| App | Source | Version | Notes |
+|---|---|---|---|
+| firecracker | in-repo kustomize (`apps/firecracker/manifests/`) | Firecracker `v1.17.0`; guest kernel `vmlinux-6.1.186` + `ubuntu-24.04` rootfs from CI build `firecracker-ci/20260923-6f82ac4cf331-0` | `firecracker-host` DaemonSet in namespace `firecracker`, scheduled only on nodes labelled and tainted `firecracker=true` (the GKE nested-virtualization pool). The init container stages the binary (SHA256-verified), kernel and a 1 GiB ext4 rootfs under `/var/lib/firecracker` on the node; the readiness probe runs `check.sh`. Versions are pinned in `kustomization.yaml`. |
+
+Once the pod is Ready:
+
+```bash
+scripts/firecracker-check.sh   # node has usable /dev/kvm, vmx flag, binary, kernel, rootfs
+scripts/firecracker-smoke.sh   # boots a throwaway microVM and waits for the guest login prompt
+```
+
+A pod stuck in `ContainerCreating` with a `FailedMount` event for `/dev/kvm` means the node has no KVM device, i.e. nested virtualization is not enabled on its pool.
+
 ## Apps shipped here
 
 | App | Chart / source | Version | Notes |
@@ -21,7 +38,7 @@ The `apps/` directory holds Argo CD `Application` definitions for everything in 
 | Kubeflow CRDs + workflow-controller RBAC | in-repo kustomize (`apps/kubeflow-crds/manifests/`) | — | Argo Workflows minimal CRDs (pinned to v3.7.3, the version KFP 2.16.1 bundles), KFP's own CRDs, plus the cluster-install workflow-controller ClusterRole/ClusterRoleBinding required when the controller runs cluster-wide. |
 | KubeRay operator | `kuberay-operator` (ray-project) | `1.6.1` | Cluster-wide install (`singleNamespaceInstall: false`) so RayClusters can live in `experiments` and any future namespace. Ships the `RayCluster` / `RayJob` / `RayService` CRDs the PPO runtime depends on. |
 | rl-bridge | in-repo manifests (`apps/rl-bridge/manifests/`) | — | Long-lived head-only `RayCluster` (`rl-head` in `experiments`) plus a `DaemonSet` that joins it from every `rl-worker=true` node as a Ray worker. Each DaemonSet pod will host the per-node policy cache + a UDS for UE worker pods to register their shmem IDs against (Phase B replaces the placeholder image with `bridge_daemon.py`). |
-| Namespaces | in-repo manifests (`apps/namespaces/`) | — | `observability`, `kubeflow`, `experiments`, `mlflow`. |
+| Namespaces | in-repo manifests (`apps/namespaces/`) | — | `observability`, `kubeflow`, `experiments`, `mlflow`, `firecracker`. |
 
 ## Layout
 
@@ -37,4 +54,6 @@ Environment roots reference shared app definitions outside their own directory, 
 |---|---|
 | `scripts/get-trigger-token.sh` | Mint a short-lived bearer token for the `ppo-trigger` ServiceAccount (used by webhook callers of the PPO pipeline). Defaults to namespace `experiments`. Honors `KUBE_CONTEXT`, `NAMESPACE`, `SA`, `DURATION` env overrides. |
 | `scripts/get-grafana-credentials.sh` | Print the chart-generated Grafana admin user + password. `eval`-friendly. |
+| `scripts/firecracker-check.sh` | Show the Firecracker nodes and pods and run `check.sh` in each pod. Honors `KUBE_CONTEXT`, `NAMESPACE`. |
+| `scripts/firecracker-smoke.sh` | Boot a throwaway microVM in each (or `POD`) firecracker-host pod and wait up to `TIMEOUT` seconds (default 60) for a login prompt. |
 | `scripts/get-argocd-credentials.sh` | Print the initial Argo CD admin password. Only useful before the first password rotation — Argo CD deletes `argocd-initial-admin-secret` once you rotate. |

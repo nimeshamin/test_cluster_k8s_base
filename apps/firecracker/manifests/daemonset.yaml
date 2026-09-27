@@ -1,0 +1,95 @@
+# firecracker-host DaemonSet.
+#
+# One pod per node labeled firecracker=true (the GKE nested-virtualization
+# pool created by the infra repo on its firecracker branch). The pod does not
+# run microVMs itself; it stages a pinned Firecracker release plus a guest
+# kernel and rootfs on the node under /var/lib/firecracker, and its readiness
+# probe reports whether the node can actually run Firecracker (/dev/kvm is
+# usable and the binary executes).
+#
+# check.sh and smoke.sh are mounted at /opt/firecracker/scripts and are driven
+# from a workstation via scripts/firecracker-check.sh and
+# scripts/firecracker-smoke.sh in this repo.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: firecracker-host
+  labels:
+    app.kubernetes.io/name: firecracker-host
+    app.kubernetes.io/part-of: firecracker
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: firecracker-host
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: firecracker-host
+        app.kubernetes.io/part-of: firecracker
+    spec:
+      nodeSelector:
+        firecracker: "true"
+      tolerations:
+        - key: firecracker
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+      initContainers:
+        - name: fetch-artifacts
+          image: alpine:3.22
+          command: ["sh", "/opt/firecracker/scripts/fetch-artifacts.sh"]
+          envFrom:
+            - configMapRef:
+                name: firecracker-artifacts
+          securityContext:
+            # mkfs.ext4 -d needs to preserve root ownership from the squashfs.
+            runAsUser: 0
+          volumeMounts:
+            - name: firecracker-root
+              mountPath: /var/lib/firecracker
+            - name: scripts
+              mountPath: /opt/firecracker/scripts
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+      containers:
+        - name: host
+          image: alpine:3.22
+          command: ["sh", "-c", "sh /opt/firecracker/scripts/check.sh && exec sleep infinity"]
+          envFrom:
+            - configMapRef:
+                name: firecracker-artifacts
+          securityContext:
+            # Needed for /dev/kvm access and, later, tap devices for guest
+            # networking. Revisit (device plugin + narrower caps) once a
+            # control plane owns VM lifecycle.
+            privileged: true
+          readinessProbe:
+            exec:
+              command: ["sh", "/opt/firecracker/scripts/check.sh", "--quiet"]
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: firecracker-root
+              mountPath: /var/lib/firecracker
+            - name: kvm
+              mountPath: /dev/kvm
+            - name: scripts
+              mountPath: /opt/firecracker/scripts
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      volumes:
+        - name: firecracker-root
+          hostPath:
+            path: /var/lib/firecracker
+            type: DirectoryOrCreate
+        - name: kvm
+          hostPath:
+            path: /dev/kvm
+            type: CharDevice
+        - name: scripts
+          configMap:
+            name: firecracker-scripts

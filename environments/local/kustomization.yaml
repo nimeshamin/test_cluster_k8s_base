@@ -1,20 +1,14 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# firecracker branch: slim platform (Istio + observability) plus the
+# Firecracker host (GCP only: needs nested virtualization). KFP, MLflow, KubeRay and rl-bridge are main-only.
 resources:
   - ../../apps/istio-base/application.yaml
   - ../../apps/istiod/application.yaml
   - ../../apps/namespaces/observability.yaml
-  - ../../apps/namespaces/kubeflow.yaml
-  - ../../apps/namespaces/experiments.yaml
-  - ../../apps/namespaces/mlflow.yaml
   - ../../apps/prometheus/application.yaml
   - ../../apps/loki/application.yaml
   - ../../apps/tempo/application.yaml
   - ../../apps/pyroscope/application.yaml
   - ../../apps/alloy/application.yaml
   - ../../apps/grafana/application.yaml
-  - ../../apps/kubeflow-crds/application.yaml
-  - ../../apps/kubeflow-pipelines/application.yaml
-  - ../../apps/mlflow/application.yaml
-  - ../../apps/kuberay-operator/application.yaml
-  - ../../apps/rl-bridge/application.yaml
