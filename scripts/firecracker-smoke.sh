@@ -16,7 +16,7 @@ SELECTOR="app.kubernetes.io/name=firecracker-host"
 
 CTX_ARGS=()
 [[ -n "${KUBE_CONTEXT:-}" ]] && CTX_ARGS=(--context="$KUBE_CONTEXT")
-k() { kubectl "${CTX_ARGS[@]}" "$@"; }
+k() { kubectl ${CTX_ARGS[@]+"${CTX_ARGS[@]}"} "$@"; }
 
 pods="${POD:-$(k -n "$NAMESPACE" get pods -l "$SELECTOR" \
   --field-selector=status.phase=Running -o jsonpath='{.items[*].metadata.name}')}"
