@@ -35,6 +35,27 @@ spec:
           value: "true"
           effect: NoSchedule
       initContainers:
+        # Mounts the reflink-capable XFS store at /var/lib/firecracker on the
+        # node; see scripts/prepare-store.sh.
+        - name: prepare-store
+          image: alpine:3.22
+          command: ["sh", "/opt/firecracker/scripts/prepare-store.sh"]
+          envFrom:
+            - configMapRef:
+                name: firecracker-artifacts
+          securityContext:
+            # losetup and mount, propagated to the host.
+            privileged: true
+          volumeMounts:
+            - name: host-var-lib
+              mountPath: /host/var/lib
+              mountPropagation: Bidirectional
+            - name: scripts
+              mountPath: /opt/firecracker/scripts
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
         - name: fetch-artifacts
           image: alpine:3.22
           command: ["sh", "/opt/firecracker/scripts/fetch-artifacts.sh"]
@@ -47,6 +68,7 @@ spec:
           volumeMounts:
             - name: firecracker-root
               mountPath: /var/lib/firecracker
+              mountPropagation: HostToContainer
             - name: scripts
               mountPath: /opt/firecracker/scripts
           resources:
@@ -56,7 +78,8 @@ spec:
       containers:
         - name: host
           image: alpine:3.22
-          command: ["sh", "-c", "sh /opt/firecracker/scripts/check.sh && exec sleep infinity"]
+          # coreutils: GNU cp for the reflink clone in smoke.sh.
+          command: ["sh", "-c", "apk add --no-cache -q coreutils && sh /opt/firecracker/scripts/check.sh && exec sleep infinity"]
           envFrom:
             - configMapRef:
                 name: firecracker-artifacts
@@ -73,6 +96,7 @@ spec:
           volumeMounts:
             - name: firecracker-root
               mountPath: /var/lib/firecracker
+              mountPropagation: HostToContainer
             - name: kvm
               mountPath: /dev/kvm
             - name: scripts
@@ -82,6 +106,10 @@ spec:
               cpu: 100m
               memory: 128Mi
       volumes:
+        - name: host-var-lib
+          hostPath:
+            path: /var/lib
+            type: Directory
         - name: firecracker-root
           hostPath:
             path: /var/lib/firecracker

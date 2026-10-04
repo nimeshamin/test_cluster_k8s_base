@@ -6,7 +6,7 @@ resources:
 configMapGenerator:
   # Pinned artifact versions. Bumping any of these rolls the DaemonSet (the
   # generated name carries a content hash) and the init container fetches the
-  # new set into /var/lib/firecracker/{release,images}/ on the node.
+  # new set into /var/lib/firecracker/{release,kernels,images}/ on the node.
   - name: firecracker-artifacts
     literals:
       - FC_VERSION=v1.17.0
@@ -14,8 +14,11 @@ configMapGenerator:
       - FC_CI_PREFIX=firecracker-ci/20260923-6f82ac4cf331-0
       - FC_KERNEL=vmlinux-6.1.186
       - FC_ROOTFS=ubuntu-24.04
+      # Sparse XFS file backing the reflink image store (prepare-store.sh).
+      - FC_STORE_SIZE=60G
   - name: firecracker-scripts
     files:
+      - scripts/prepare-store.sh
       - scripts/fetch-artifacts.sh
       - scripts/check.sh
       - scripts/smoke.sh

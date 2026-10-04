@@ -17,8 +17,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 mkdir -p "$RUN_DIR"
-# Each run gets its own writable copy so the staged image stays pristine.
-cp "$FC_ROOTFS_PATH" "$RUN_DIR/rootfs.ext4"
+# Each run gets its own writable reflink clone (copy-on-write, instant) so the
+# read-only base image stays pristine. Needs GNU cp (coreutils).
+cp --reflink=always "$FC_ROOTFS_PATH" "$RUN_DIR/rootfs.ext4"
+chmod 0644 "$RUN_DIR/rootfs.ext4"
 
 cat > "$RUN_DIR/vm.json" <<JSON
 {

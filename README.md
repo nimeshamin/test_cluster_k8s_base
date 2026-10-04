@@ -10,7 +10,7 @@ The `apps/` directory holds Argo CD `Application` definitions for everything in 
 
 | App | Source | Version | Notes |
 |---|---|---|---|
-| firecracker | in-repo kustomize (`apps/firecracker/manifests/`) | Firecracker `v1.17.0`; guest kernel `vmlinux-6.1.186` + `ubuntu-24.04` rootfs from CI build `firecracker-ci/20260923-6f82ac4cf331-0` | `firecracker-host` DaemonSet in namespace `firecracker`, scheduled only on nodes labelled and tainted `firecracker=true` (the GKE nested-virtualization pool). The init container stages the binary (SHA256-verified), kernel and a 1 GiB ext4 rootfs under `/var/lib/firecracker` on the node; the readiness probe runs `check.sh`. Versions are pinned in `kustomization.yaml`. |
+| firecracker | in-repo kustomize (`apps/firecracker/manifests/`) | Firecracker `v1.17.0`; guest kernel `vmlinux-6.1.186` + `ubuntu-24.04` rootfs from CI build `firecracker-ci/20260923-6f82ac4cf331-0` | `firecracker-host` DaemonSet in namespace `firecracker`, scheduled only on nodes labelled and tainted `firecracker=true` (the GKE nested-virtualization pool). Init containers first mount a reflink-capable XFS store at `/var/lib/firecracker` (`prepare-store.sh`: a sparse `FC_STORE_SIZE` file at `/var/lib/firecracker-store.xfs`, loop-mounted and propagated to the host so `fc-agent` sees it), then stage the binary (SHA256-verified), kernel (`kernels/`) and the read-only `ubuntu-24.04` base image (`images/ubuntu-24.04/rootfs.ext4`) on it. VM disks are reflink clones of base images. The readiness probe runs `check.sh`. Versions are pinned in `kustomization.yaml`. |
 
 Once the pod is Ready:
 

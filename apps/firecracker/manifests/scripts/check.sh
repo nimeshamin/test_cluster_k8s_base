@@ -8,7 +8,11 @@ QUIET=0
 ok() { [ "$QUIET" = 1 ] || echo "ok    $*"; }
 fail() { echo "FAIL  $*" >&2; exit 1; }
 
-ENV_FILE=/var/lib/firecracker/current.env
+ROOT=/var/lib/firecracker
+[ "$(stat -f -c %T "$ROOT" 2>/dev/null)" = xfs ] || fail "$ROOT is not the XFS image store (prepare-store.sh)"
+ok "$ROOT is XFS (reflink store)"
+
+ENV_FILE=$ROOT/current.env
 [ -f "$ENV_FILE" ] || fail "artifacts not staged ($ENV_FILE missing)"
 . "$ENV_FILE"
 
@@ -24,5 +28,6 @@ ok "$version"
 
 [ -f "$FC_KERNEL_PATH" ] || fail "kernel missing: $FC_KERNEL_PATH"
 ok "kernel $FC_KERNEL_PATH"
-[ -f "$FC_ROOTFS_PATH" ] || fail "rootfs missing: $FC_ROOTFS_PATH"
-ok "rootfs $FC_ROOTFS_PATH"
+[ -f "$FC_ROOTFS_PATH" ] || fail "base image missing: $FC_ROOTFS_PATH"
+ok "base image $FC_ROOTFS_PATH"
+ok "cached images: $(ls "$ROOT/images" | grep -v '^\.' | tr '\n' ' ')"
