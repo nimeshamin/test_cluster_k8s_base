@@ -6,3 +6,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "5"
   labels:
     app.kubernetes.io/part-of: test-cluster
+    # firecracker-host is privileged (loop/mount, /dev/kvm); explicit rather
+    # than inherited from the cluster default.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged

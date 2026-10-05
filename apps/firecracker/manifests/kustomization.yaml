@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: firecracker
 resources:
   - daemonset.yaml
+  - networkpolicy.yaml
 configMapGenerator:
   # Pinned artifact versions. Bumping any of these rolls the DaemonSet (the
   # generated name carries a content hash) and the init container fetches the

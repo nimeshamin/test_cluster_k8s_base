@@ -1,0 +1,8 @@
+# firecracker-host serves nothing; deny all ingress to the namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
